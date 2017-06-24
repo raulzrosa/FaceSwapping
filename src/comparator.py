@@ -41,7 +41,6 @@ def initData(search_dir):
 
 
 # TODO
-# Use stored metrics to determine most similar face,
-# then return its BGR version
+# test_data is a list of FaceEntry objects
 def calculateMostSimilar(gray, test_data):
     return test_data[0].bgr
