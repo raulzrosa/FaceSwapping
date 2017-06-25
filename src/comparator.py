@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Group 6
-# Hugo Moraes Dzin 8532816
+# Hugo Moraes Dzin 8532186
 # Matheus Gomes da Silva Horta 8532321
 # Raul Zaninetti Rosa 8517310
 
