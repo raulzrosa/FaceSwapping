@@ -36,6 +36,16 @@ def findLargest(gray):
     return largest_face
 
 
+def findMouth(largest_face):
+    mouths = MOUTH_HAAR.detectMultiScale(largest_face, 1.1, 3)
+    if len(mouths) == 0:
+        return None
+
+    mouth_y = [y+h for (x, y, w, h) in mouths]
+    lowest_mouth = mouths[np.argmax(mouth_y)]
+
+    return lowest_mouth
+
 # TODO find multiple faces
 def findFaces(gray):
     face = findLargest(gray)
@@ -46,3 +56,4 @@ def findFaces(gray):
 
 
 # TODO? face tracking
+

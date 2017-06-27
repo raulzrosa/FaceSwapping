@@ -11,8 +11,9 @@ import numpy as np
 
 def pasteFace(target, new_face):
     # Resize to target's dimensions
-    new_face = cv2.resize(new_face, target.shape[:2])
-
+    new_y, new_x = target.shape[:2]
+    new_face = cv2.resize(new_face, (new_x, new_y))
+    
     # Calculate mask position and size
     rows, cols = target.shape[:2]
     mask_h = int(np.round(rows * 0.9))
