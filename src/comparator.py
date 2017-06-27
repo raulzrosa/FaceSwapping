@@ -51,10 +51,24 @@ def initData(search_dir):
     return test_data
 
 
+#histogram comparation
+def histComparation(gray, test_data):
+    hist_input = cv2.calcHist([gray],[0],None,[256],[0,256])
+    final_value = 0
+    most_equal = test_data[0].face_bgr
+    for professor in test_data:
+        hist_professor = cv2.calcHist([professor.face_gray],[0],None,[256],[0,256])
+        #testar outras metricas para computar 
+        partial_value = cv2.compareHist(hist_input, hist_professor, cv2.HISTCMP_CORREL)
+        if partial_value > final_value:
+            final_value = partial_value
+            most_equal = professor.face_bgr
+    return most_equal
 #def HOG(gray, test_data):
 
 # TODO
 # test_data is a list of FaceEntry objects
 # test_data = list with professors faces
 def calculateMostSimilar(gray, test_data):
-    return test_data[1].eye_bgr
+    most_similar_hist_comp = histComparation(gray, test_data)
+    return most_similar_hist_comp
