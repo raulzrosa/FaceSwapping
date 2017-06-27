@@ -46,6 +46,16 @@ def findMouth(largest_face):
 
     return lowest_mouth
 
+def findEye(largest_face):
+    eyes = EYE_HAAR.detectMultiScale(largest_face, 1.1, 3)
+    if len(eyes) == 0:
+        return None
+
+    eyes_y = [y+h for (x, y, w, h) in eyes]
+    lowest_eye = eyes[np.argmax(eyes_y)]
+
+    return lowest_eye
+
 # TODO find multiple faces
 def findFaces(gray):
     face = findLargest(gray)
