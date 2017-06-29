@@ -58,7 +58,6 @@ def findEye(largest_face):
     return lowest_eye
 
 
-# TODO find multiple matches
 def findFaces(gray):
     matches = FACE_HAAR.detectMultiScale(gray, 1.1, 6, minSize=(40, 40))
 
