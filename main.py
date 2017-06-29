@@ -28,10 +28,15 @@ def main():
     parser.add_argument(
             '-d', '--directory', metavar='DIR', default='professors', type=str,
             help='directory containing replacement faces')
+    parser.add_argument(
+            '-m', '--mode', default='use-dir', type=str,
+            help='MODE = use-dir: use replacement faces from -d. ' +
+            'MODE = within-pic: swap the faces within input with eachother')
 
     args = parser.parse_args()
 
-    TEST_DATA = comparator.initData(args.directory)
+    if args.mode == 'use-dir':
+        TEST_DATA = comparator.initData(args.directory)
 
     if args.filename is None:
         # No file specified, use camera
@@ -50,12 +55,14 @@ def fromCamera():
         _, frame = camera.read()
         # Flip around Y axis to look more natural
         frame = cv2.flip(frame, 1)
-        processed = process(frame)
+        processed = test_hugo(frame)
         cv2.imshow('Video Capture', processed)
 
         ch = cv2.waitKey(1) & 0xFF
         if ch == ord('q'):
             break  # Close program
+        if ch == ord('w'):
+            pass  # TODO Compute most similar
 
     camera.release()
 
@@ -63,6 +70,7 @@ def fromCamera():
 # Finds all faces in <bgr> and replaces each of them by another one
 def process(bgr):
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.normalize(gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
 
     faces = detector.findFaces(gray)
 
@@ -70,9 +78,23 @@ def process(bgr):
         roi_gray = utils.roi(gray, face)
         roi_bgr = utils.roi(bgr, face)
 
-        utils.drawRect(gray, face, (0, 255, 0))
         new_face = comparator.calculateMostSimilar(roi_gray, TEST_DATA)
         replacer.pasteFace(roi_bgr, new_face)
+
+    return bgr
+
+
+def test_hugo(bgr, old_faces=[]):
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    (faces, bad_matches) = detector.findFaces(gray)
+
+    for face in faces:
+        utils.drawRect(bgr, face, (0, 255, 0))
+
+    for face in bad_matches:
+        utils.drawRect(bgr, face, (0, 0, 255))
+        #roi_gray = utils.roi(gray, face)
+        #roi_bgr = utils.roi(bgr, face)
 
     return bgr
 
