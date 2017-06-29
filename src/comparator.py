@@ -92,14 +92,14 @@ def calculateSimilarity(gray, test_data, comparator):
 
     elif comparator == 'sift':
         kp1, des1 = sift.detectAndCompute(gray, None)
+        good = []
         for professor in test_data:
             # BFMatcher with default params
             bf = cv2.BFMatcher()
             matches = bf.knnMatch(des1, professor.siftDesc, k=2)
             # Apply ratio test
-            good = []
             for m, n in matches:
-                if m.distance < 0.75 * n.distance:
+                if m.distance < 0.8 * n.distance:
                     good.append([m])
             print(len(good))
             partial_value = len(good)
@@ -142,7 +142,8 @@ def calculateSimilarity(gray, test_data, comparator):
 # TODO
 # test_data is a list of FaceEntry objects
 # test_data = list with professors faces
+# Select whitch algorithm to use by changing the third argument
 def calculateMostSimilar(gray, test_data):
-    most_similar = calculateSimilarity(gray, test_data, 'sift')
+    most_similar = calculateSimilarity(gray, test_data, 'hist')
     # most_similar_hist_comp = histComparison(gray, test_data)
     return most_similar
