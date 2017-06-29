@@ -46,6 +46,7 @@ def findMouth(largest_face):
 
     return lowest_mouth
 
+
 def findEye(largest_face):
     eyes = EYE_HAAR.detectMultiScale(largest_face, 1.1, 3)
     if len(eyes) == 0:
@@ -56,14 +57,30 @@ def findEye(largest_face):
 
     return lowest_eye
 
-# TODO find multiple faces
+
+# TODO find multiple matches
 def findFaces(gray):
-    face = findLargest(gray)
-    if face is None:
-        return []
-    else:
-        return [face]
+    matches = FACE_HAAR.detectMultiScale(gray, 1.1, 6, minSize=(40, 40))
 
+    good_matches = []
+    bad_matches = []
 
-# TODO? face tracking
+    for face1 in matches:
+        face1_is_good = True
 
+        # Is there a larger face overlapping this one?
+        # Yes -> face1 is no good
+        for face2 in matches:
+            if face1 is not face2:
+                they_overlap = utils.overlaps(face1, face2)
+                face2_larger = face2 is utils.largest(face1, face2)
+
+                if they_overlap and face2_larger:
+                    face1_is_good = False
+
+        if face1_is_good:
+            good_matches.append(face1)
+        else:
+            bad_matches.append(face1)
+
+    return (good_matches, bad_matches)
