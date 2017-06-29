@@ -55,14 +55,12 @@ def fromCamera():
         _, frame = camera.read()
         # Flip around Y axis to look more natural
         frame = cv2.flip(frame, 1)
-        processed = test_hugo(frame)
+        processed = process(frame)
         cv2.imshow('Video Capture', processed)
 
         ch = cv2.waitKey(1) & 0xFF
         if ch == ord('q'):
             break  # Close program
-        if ch == ord('w'):
-            pass  # TODO Compute most similar
 
     camera.release()
 
@@ -70,26 +68,12 @@ def fromCamera():
 # Finds all faces in <bgr> and replaces each of them by another one
 def process(bgr):
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    gray = cv2.normalize(gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
 
-    faces = detector.findFaces(gray)
-
-    for face in faces:
-        roi_gray = utils.roi(gray, face)
-        roi_bgr = utils.roi(bgr, face)
-
-        new_face = comparator.calculateMostSimilar(roi_gray, TEST_DATA)
-        replacer.pasteFace(roi_bgr, new_face)
-
-    return bgr
-
-
-def test_hugo(bgr, old_faces=[]):
-    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    (faces, bad_matches) = detector.findFaces(gray)
+    faces, _ = detector.findFaces(gray)
 
     for face in faces:
         roi_gray = utils.roi(gray, face)
+        cv2.normalize(gray, gray, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
         roi_bgr = utils.roi(bgr, face)
 
         new_face = comparator.calculateMostSimilar(roi_gray, TEST_DATA)
