@@ -9,33 +9,42 @@ import cv2
 import numpy as np
 
 
+# Create the mask used for face stiching
+def make_mask(side):
+    mask_h = int(np.round(side * 0.85))
+    mask_w = int(np.round(side * 0.7))
+
+    center = 2 * (side // 2,)
+    dims = (mask_w // 2, mask_h // 2)
+    alpha = 0.75
+
+    mask = np.zeros((side, side, 3))
+    cv2.ellipse(mask, center, dims, 0, 0, 360, 3 * (alpha,), -1)
+
+    anti_mask = np.ones((side, side, 3)) - mask
+
+    return (mask, anti_mask)
+
+
+GLOBAL_MASK, GLOBAL_ANTI_MASK = make_mask(300)
+
+
 def pasteFace(target, new_face):
     # Resize to target's dimensions
     new_y, new_x = target.shape[:2]
     new_face = cv2.resize(new_face, (new_x, new_y))
-    
-    # Calculate mask position and size
-    rows, cols = target.shape[:2]
-    mask_h = int(np.round(rows * 0.9))
-    mask_w = int(np.round(cols * 0.75))
 
-    center = (cols // 2, rows // 2)
-    dims = (mask_w // 2, mask_h // 2)
+    # Resize masks to fit the target size
+    mask = cv2.resize(GLOBAL_MASK, (new_x, new_y))
+    anti_mask = cv2.resize(GLOBAL_ANTI_MASK, (new_x, new_y))
 
-    mask = np.zeros(target.shape, dtype=np.uint8)
-    cv2.ellipse(mask, center, dims, 0, 0, 360, (1, 1, 1), -1)
-
-    anti_mask = np.ones(target.shape, dtype=np.uint8)
-    anti_mask -= mask
-
-    new_face = hist_match_wrapper(new_face, target)
-
-    # Paste face
-    masked_face = new_face * mask
-    target *= anti_mask
+    # target = target*mask + new_face*anti_mask
+    masked_face = np.uint8(new_face * mask)
+    target[:] = np.uint8(target * anti_mask)
     target += masked_face
 
 
+# THE FOLLOWING 2 FUNCTIONS WERE NOT USED
 def hist_match_wrapper(source, template):
     source = cv2.cvtColor(source, cv2.COLOR_BGR2YCR_CB)
     template = cv2.cvtColor(template, cv2.COLOR_BGR2YCR_CB)

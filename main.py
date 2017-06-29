@@ -89,12 +89,11 @@ def test_hugo(bgr, old_faces=[]):
     (faces, bad_matches) = detector.findFaces(gray)
 
     for face in faces:
-        utils.drawRect(bgr, face, (0, 255, 0))
+        roi_gray = utils.roi(gray, face)
+        roi_bgr = utils.roi(bgr, face)
 
-    for face in bad_matches:
-        utils.drawRect(bgr, face, (0, 0, 255))
-        #roi_gray = utils.roi(gray, face)
-        #roi_bgr = utils.roi(bgr, face)
+        new_face = comparator.calculateMostSimilar(roi_gray, TEST_DATA)
+        replacer.pasteFace(roi_bgr, new_face)
 
     return bgr
 
