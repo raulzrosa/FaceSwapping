@@ -28,15 +28,10 @@ def main():
     parser.add_argument(
             '-d', '--directory', metavar='DIR', default='professors', type=str,
             help='directory containing replacement faces')
-    parser.add_argument(
-            '-m', '--mode', default='use-dir', type=str,
-            help='MODE = use-dir: use replacement faces from -d. ' +
-            'MODE = within-pic: swap the faces within input with eachother')
 
     args = parser.parse_args()
 
-    if args.mode == 'use-dir':
-        TEST_DATA = comparator.initData(args.directory)
+    TEST_DATA = comparator.initData(args.directory)
 
     if args.filename is None:
         # No file specified, use camera
