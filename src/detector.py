@@ -46,19 +46,21 @@ def findMouth(largest_face):
 
     return lowest_mouth
 
-#return distance between the eyes
-def findEye(largest_face):
+
+# return distance between the eyes
+def eyeDistance(largest_face):
     eyes = EYE_HAAR.detectMultiScale(largest_face, 1.1, 3)
     if len(eyes) == 2:
         input_eyes = []
         for (x, y, w, h) in eyes:
-            input_eyes.append([int(x + (w/2)),int(y + (h/2))])
+            input_eyes.append([int(x + (w/2)), int(y + (h/2))])
         dist_eyes = input_eyes[0][0] - input_eyes[1][0]
         return dist_eyes
     else:
         return None
 
-def findNose(largest_face):
+
+def noseWidth(largest_face):
     noses = NOSE_HAAR.detectMultiScale(largest_face, 1.1, 3)
     if len(noses) == 0:
         return None
@@ -66,7 +68,7 @@ def findNose(largest_face):
     nose_y = [y+h for (x, y, w, h) in noses]
     largest_nose = noses[np.argmax(nose_y)]
 
-    return largest_nose 
+    return largest_nose[2]
 
 
 def findFaces(gray):

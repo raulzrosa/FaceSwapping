@@ -13,25 +13,26 @@ import numpy as np
 
 from src import utils, detector
 
-sift = cv2.xfeatures2d.SIFT_create() 
+sift = cv2.xfeatures2d.SIFT_create()
+
 
 def cascadeFromXml(name):
     filename = 'haarcascades/' + name + '.xml'
     return cv2.CascadeClassifier(filename)
+
 
 EYE_HAAR = cascadeFromXml('haarcascade_eye')
 NOSE_HAAR = cascadeFromXml('Nariz')
 
 
 class FaceEntry:
-    def __init__(self, face_bgr, face_gray, mouth_bgr, mouth_gray, nose_bgr, nose_gray, dist_eyes, hist, siftDesc):
+    def __init__(self, index, face_bgr, face_gray, mouth_rect, nose_width, dist_eyes, hist, siftDesc):
+        self.index = index
         self.face_bgr = face_bgr
         self.face_gray = face_gray
-        self.mouth_bgr = mouth_bgr
-        self.mouth_gray = mouth_gray
-        self.nose_bgr = nose_bgr
-        self.nose_gray = nose_gray
-        
+
+        self.mouth_rect = mouth_rect
+        self.nose_width = nose_width
         self.dist_eyes = dist_eyes
 
         self.hist = hist
@@ -42,16 +43,14 @@ def initData(search_dir):
     filenames = glob.glob(os.path.join(search_dir, '*.jpg'))
 
     test_data = []
-    for f in filenames:
+    for index, f in enumerate(filenames):
         # print(f[len('professors.'):])
         bgr = cv2.imread(f)
         gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
 
         face = detector.findLargest(gray)
-        mouth = detector.findMouth(gray)
-        nose = detector.findNose(gray)
 
-        dist_eyes = detector.findEye(gray)
+        roi_face = utils.roi(gray, face)
 
         if face is not None:
             cropped_bgr = utils.roi(bgr, face).copy()
@@ -59,47 +58,28 @@ def initData(search_dir):
             hist = cv2.calcHist([cropped_gray], [0], None, [256], [0, 256])
             _, siftDesc = sift.detectAndCompute(cropped_gray, None)
 
-        if mouth is not None:
-            cropped_mouth_bgr = utils.roi(bgr, mouth).copy()
-            cropped_mouth_gray = utils.roi(gray, mouth).copy()
+            mouth_rect = detector.findMouth(roi_face)
 
-        if nose is not None:
-            cropped_nose_bgr = utils.roi(bgr, nose).copy()
-            cropped_nose_gray = utils.roi(gray, nose).copy()
+            dist_eyes = detector.eyeDistance(roi_face)
+            nose_width = detector.noseWidth(roi_face)
 
-        # TODO calculate and store metrics (SIFT, HOG etc)
-        test_data.append(
-            FaceEntry(cropped_bgr, cropped_gray, cropped_mouth_bgr, cropped_mouth_gray, cropped_nose_bgr, cropped_nose_gray, dist_eyes, hist, siftDesc))
+            test_data.append(FaceEntry(index, cropped_bgr, cropped_gray, mouth_rect, nose_width, dist_eyes, hist, siftDesc))
 
     return test_data
 
 
-# # histogram comparation
-# def histComparison(gray, test_data):
-#     hist_input = cv2.calcHist([gray], [0], None, [256], [0, 256])
-#     final_value = 0
-#     most_equal = test_data[0].face_bgr
-#     for professor in test_data:
-#         hist_professor = cv2.calcHist([professor.face_gray], [0], None, [256], [0, 256])
-#         # testar outras metricas para computar
-#         partial_value = cv2.compareHist(hist_input, hist_professor, cv2.HISTCMP_CORREL)
-#         if partial_value > final_value:
-#             final_value = partial_value
-#             most_equal = professor.face_bgr
-#     return most_equal
-
-
 def calculateSimilarity(gray, test_data, comparator):
     final_value = 0
-    most_equal = test_data[0].face_bgr
+    most_equal = test_data[0].index
 
     if comparator == 'hist':
         hist_input = cv2.calcHist([gray], [0], None, [256], [0, 256])
+
         for professor in test_data:
             partial_value = cv2.compareHist(hist_input, professor.hist, cv2.HISTCMP_CORREL)
             if partial_value > final_value:
                 final_value = partial_value
-                most_equal = professor.face_bgr
+                most_equal = professor.index
 
     elif comparator == 'sift':
         kp1, des1 = sift.detectAndCompute(gray, None)
@@ -112,74 +92,13 @@ def calculateSimilarity(gray, test_data, comparator):
             for m, n in matches:
                 if m.distance < 0.8 * n.distance:
                     good.append([m])
-            print(len(good))
+            #print(len(good))
             partial_value = len(good)
             if partial_value > final_value:
                 final_value = partial_value
-                most_equal = professor.face_bgr
+                most_equal = professor.index
 
     return most_equal
-
-def calc_input_dist_eyes(gray):
-    eyes = EYE_HAAR.detectMultiScale(gray, 1.1, 3)
-    if len(eyes) == 2:
-        input_eyes = []
-        for (x, y, w, h) in eyes:
-            input_eyes.append([int(x + (w/2)),int(y + (h/2))])
-        dist_eyes = input_eyes[0][0] - input_eyes[1][0]
-        return dist_eyes
-    else:
-        return None
-
-def top_eye_dif(gray, test_data):
-    #10 melhores distancia entre olhos
-    top10 = []
-    input_dist_eyes = calc_input_dist_eyes(gray)
-
-    for professor in test_data:
-        #diference between input distance eyes and professor distance eyes
-        if professor.dist_eyes != None:
-            dif = abs(input_dist_eyes - professor.dist_eyes)
-            if len(top10) < 10:
-                top10.append([professor, dif])
-            else:
-                for top10_professor in top10:
-                    if top10_professor[1] > dif:
-                        top10.remove(top10_professor)
-                        top10.append([professor, dif])
-    sorted(top10, key= lambda x: x[1])
-    return top10
-
-def calc_input_nose_size(gray):
-    noses = NOSE_HAAR.detectMultiScale(gray, 1.1, 3)
-    if len(noses) == 0:
-        return None
-
-    nose_y = [y+h for (x, y, w, h) in noses]
-    largest_nose = noses[np.argmax(nose_y)]
-    cropped_nose_gray = utils.roi(gray, largest_nose).copy()
-    return cropped_nose_gray
-
-
-def top_nose_dif(gray, test_data):
-    #10 melhores tamanhos de nariz
-    top10 = []
-    input_nose = calc_input_nose_size(gray)
-    input_height, input_width = input_nose.shape
-
-    for professor in test_data:
-        prof_height, prof_width = professor.nose_gray.shape
-
-        dif = abs(input_height - prof_height)
-        if len(top10) < 10:
-            top10.append([professor, dif])
-        else:
-            for top10_professor in top10:
-                if top10_professor[1] > dif:
-                    top10.remove(top10_professor)
-                    top10.append([professor, dif])
-    sorted(top10, key= lambda x: x[1])
-    return top10
 
 
 # TODO
@@ -187,41 +106,70 @@ def top_nose_dif(gray, test_data):
 # test_data = list with professors faces
 # Select whitch algorithm to use by changing the third argument
 def calculateMostSimilar(gray, test_data):
-    most_similar = calculateSimilarity(gray, test_data, 'sift')
-    # most_similar_hist_comp = histComparison(gray, test_data)
-    top10_nose = top_nose_dif(gray, test_data)
-    top10_eye = top_eye_dif(gray, test_data)
-    #most_similar = top10[9]
+    best_sift = calculateSimilarity(gray, test_data, 'sift')
+    scores = np.zeros(len(test_data), np.int)
 
-    #print(top10[9][0].face_bgr)
-    return top10_eye[9][0].face_bgr
+    NOSE_SCORE = 30
+    EYE_SCORE = 30
+    SIFT_SCORE = 40
+
+    nose_width = detector.noseWidth(gray)
+    eye_dist = detector.eyeDistance(gray)
+
+    if nose_width is not None:
+        best_noses = top_nose_dif(nose_width, test_data)
+        addScore(scores, best_noses, NOSE_SCORE)
+    if eye_dist is not None:
+        best_eyes = top_eye_dif(eye_dist, test_data)
+        addScore(scores, best_eyes, EYE_SCORE)
+
+    scores[best_sift] += SIFT_SCORE
+
+    print(best_noses)
+    print(best_eyes)
+    print(best_sift)
+
+    best_index = np.argmax(scores)
+    return test_data[best_index].face_bgr
 
 
+# add up scores with weights
+def addScore(total_scores, prof_results, multiplier, weights=[1, 4, 9, 16, 25]):
+    for (index, (prof, _)) in enumerate(prof_results):
+        total_scores[prof.index] += multiplier * weights[index]
 
 
-# def siftComparison(gray, test_data):
-#     final_value = 0
-#     most_equal = test_data[0].face_bgr
-#     kp1, des1 = sift.detectAndCompute(gray, None)
-#
-#     for professor in test_data:
-#         # find the keypoints and descriptors with SIFT
-#         kp2, des2 = sift.detectAndCompute(professor.face_gray, None)
-#
-#         # BFMatcher with default params
-#         bf = cv2.BFMatcher()
-#         matches = bf.knnMatch(des1, des2, k=2)
-#
-#         # Apply ratio test
-#         good = []
-#         for m, n in matches:
-#             if m.distance < 0.75 * n.distance:
-#                 good.append([m])
-#
-#         partial_value = len(good)
-#         if partial_value > final_value:
-#             final_value = partial_value
-#             most_equal = professor.face_bgr
-#
-#     return most_equal
-#
+# Get <top_count> professors with mose similar eye distance
+def top_eye_dif(input_dist_eyes, test_data, top_count=5):
+    # compute and sort by difference of eye_distance
+    prof_scores = [
+            (prof, abs(input_dist_eyes - prof.dist_eyes))
+            for prof in test_data
+            if prof.dist_eyes is not None
+    ]
+
+    # sorted_profs[0] is the worst, sorted_profs[-1] is the best
+    sorted_profs = sorted(prof_scores, key=lambda x: x[1])
+
+    # take only the <top_count> best
+    best_matches = sorted_profs[-top_count:]
+
+    return best_matches
+
+
+# Get <top_count> professors with mose similar nose width
+def top_nose_dif(input_nose_width, test_data, top_count=5):
+    # compute and sort by difference of eye_distance
+    prof_scores = [
+            (prof, abs(input_nose_width - prof.nose_width))
+            for prof in test_data
+            if prof.nose_width is not None
+    ]
+
+    # sorted_profs[0] is the worst, sorted_profs[-1] is the best
+    sorted_profs = sorted(prof_scores, key=lambda x: x[1])
+
+    # take only the <top_count> best
+    best_matches = sorted_profs[-top_count:]
+
+    return best_matches
