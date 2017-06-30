@@ -125,22 +125,23 @@ def calculateMostSimilar(gray, test_data):
 
     scores[best_sift] += SIFT_SCORE
 
-    print(best_noses)
-    print(best_eyes)
-    print(best_sift)
+    #print(best_noses)
+    #print(best_eyes)
+    #print(best_sift)
 
     best_index = np.argmax(scores)
     return test_data[best_index].face_bgr
 
 
+WEIGHTS = list(range(1, 11))
 # add up scores with weights
-def addScore(total_scores, prof_results, multiplier, weights=[1, 4, 9, 16, 25]):
+def addScore(total_scores, prof_results, multiplier, weights=WEIGHTS):
     for (index, (prof, _)) in enumerate(prof_results):
         total_scores[prof.index] += multiplier * weights[index]
 
 
 # Get <top_count> professors with mose similar eye distance
-def top_eye_dif(input_dist_eyes, test_data, top_count=5):
+def top_eye_dif(input_dist_eyes, test_data, top_count=10):
     # compute and sort by difference of eye_distance
     prof_scores = [
             (prof, abs(input_dist_eyes - prof.dist_eyes))
@@ -158,7 +159,7 @@ def top_eye_dif(input_dist_eyes, test_data, top_count=5):
 
 
 # Get <top_count> professors with mose similar nose width
-def top_nose_dif(input_nose_width, test_data, top_count=5):
+def top_nose_dif(input_nose_width, test_data, top_count=10):
     # compute and sort by difference of eye_distance
     prof_scores = [
             (prof, abs(input_nose_width - prof.nose_width))
